@@ -1,0 +1,71 @@
+version: "3.9"
+
+# ─── Local test stack ─────────────────────────────────────────────────────────
+# Usage:
+#   HF_TOKEN=hf_xxx docker compose up
+#
+# Requires:
+#   - 2x NVIDIA GPUs (H100/A100) with nvidia-container-toolkit installed
+#   - HuggingFace token with access to deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+#
+# Model cache is persisted in ./models (or override MODEL_CACHE_DIR)
+
+services:
+  vllm:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: deepseek-r1-vllm:latest
+    container_name: deepseek-r1
+    runtime: nvidia
+    environment:
+      - MODEL_NAME=${MODEL_NAME:-deepseek-ai/DeepSeek-R1-Distill-Llama-70B}
+      - MAX_MODEL_LEN=${MAX_MODEL_LEN:-32768}
+      - TENSOR_PARALLEL_SIZE=${TENSOR_PARALLEL_SIZE:-2}
+      - GPU_MEMORY_UTILIZATION=${GPU_MEMORY_UTILIZATION:-0.95}
+      - PORT=${PORT:-8000}
+      - HF_TOKEN=${HF_TOKEN}
+      - HF_HOME=/models
+      - TRANSFORMERS_CACHE=/models
+    volumes:
+      - ${MODEL_CACHE_DIR:-./models}:/models
+    ports:
+      - "${PORT:-8000}:8000"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: ${TENSOR_PARALLEL_SIZE:-2}
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 300s   # model load can take ~5 minutes
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "100m"
+        max-file: "3"
+
+  # ─── Lightweight health-check sidecar (optional) ───────────────────────────
+  healthcheck-proxy:
+    image: nginx:alpine
+    container_name: deepseek-healthcheck
+    depends_on:
+      vllm:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    profiles:
+      - with-nginx
+
+volumes:
+  models:
+    driver: local

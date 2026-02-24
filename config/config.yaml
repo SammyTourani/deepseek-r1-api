@@ -1,0 +1,36 @@
+model:
+  name: deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+  tensor_parallel_size: 2        # H100 GPUs per node
+  max_model_len: 32768           # max tokens in context window (KV cache limit)
+  context_length: 128000         # model's native context (may require more VRAM)
+  gpu_memory_utilization: 0.95   # fraction of GPU VRAM to use
+
+sfcompute:
+  zone: landsend
+  instance_type: h100-80gb-2x    # 2x H100 SXM 80GB per node
+  min_nodes: 1
+  max_nodes: 4
+  price_cap_per_gpu: 2.00        # USD / GPU-hour maximum bid
+
+scaling:
+  scale_up_latency_ms: 2000      # p99 latency threshold to trigger scale-up
+  scale_up_duration_minutes: 3   # must sustain for N minutes before acting
+  scale_down_latency_ms: 500     # p99 latency threshold to trigger scale-down
+  scale_down_duration_minutes: 10 # must sustain for N minutes before acting
+  cooldown_minutes: 5            # minimum time between consecutive scale events
+
+aws:
+  region: us-east-1
+  api_gateway_name: deepseek-r1-api
+  lambda_timeout_seconds: 120    # proxy Lambda timeout (model can take ~60-90s)
+  lambda_memory_mb: 512
+
+auth:
+  require_api_key: true          # clients must pass x-api-key header
+  key_rotation_days: 90
+
+cloudflare:
+  # Set these after CDK deploy; use the API Gateway endpoint as CNAME target
+  zone_id: ""                    # Your Cloudflare zone ID
+  record_name: "api.deepseek"    # Will become api.deepseek.yourdomain.com
+  proxied: false                 # false = DNS-only (recommended for low latency)

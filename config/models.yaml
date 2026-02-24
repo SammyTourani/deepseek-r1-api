@@ -1,0 +1,160 @@
+# DeepSeek R1 Model Variants — GPU Requirements & Pricing Guide
+# =============================================================
+# All models are MIT-licensed and available on HuggingFace.
+# Use this file to choose the right model for your budget and latency needs.
+
+models:
+  # ─── Full DeepSeek R1 (MoE 671B) ─────────────────────────────────────────
+  - id: deepseek-ai/DeepSeek-R1
+    display_name: "DeepSeek R1 (671B MoE)"
+    huggingface_repo: deepseek-ai/DeepSeek-R1
+    parameter_count: "671B"
+    architecture: "MoE (Mixture of Experts)"
+    status: not_recommended    # InfiniBand required; not available on SF Compute yet
+    gpu_requirements:
+      gpus: 8
+      gpu_type: H100-SXM-80GB
+      requires_infiniband: true
+      vram_gb: 640            # ~80 bytes/param at FP8
+      tensor_parallel_size: 8
+    sfcompute:
+      instance_type: h100-80gb-8x   # NOT yet available
+      nodes: 1
+      cost_per_hour_usd: ~16.00    # 8x H100 @ ~$2/GPU/hr
+    vllm_config:
+      max_model_len: 32768
+      gpu_memory_utilization: 0.90
+      dtype: fp8
+    notes: "Best reasoning quality. Requires InfiniBand for 8-GPU tensor parallelism."
+
+  # ─── DeepSeek R1-Distill-Llama-70B ← RECOMMENDED ─────────────────────────
+  - id: deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+    display_name: "DeepSeek R1 Distill Llama 70B ⭐ RECOMMENDED"
+    huggingface_repo: deepseek-ai/DeepSeek-R1-Distill-Llama-70B
+    parameter_count: "70B"
+    architecture: "Dense (Llama-3 backbone)"
+    status: recommended
+    gpu_requirements:
+      gpus: 2
+      gpu_type: H100-SXM-80GB
+      requires_infiniband: false
+      vram_gb: 140            # ~2 bytes/param at BF16
+      tensor_parallel_size: 2
+    sfcompute:
+      instance_type: h100-80gb-2x
+      nodes: 1
+      cost_per_hour_usd: ~4.00    # 2x H100 @ ~$2/GPU/hr
+    vllm_config:
+      max_model_len: 32768
+      gpu_memory_utilization: 0.95
+      dtype: bfloat16
+      served_model_name: deepseek-r1
+    notes: |
+      Best quality-to-cost ratio. ~90% of full R1 performance on reasoning benchmarks.
+      Fits 2x H100 with comfortable margin. Supported by this infrastructure.
+
+  # ─── DeepSeek R1-Distill-Qwen-32B ────────────────────────────────────────
+  - id: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+    display_name: "DeepSeek R1 Distill Qwen 32B"
+    huggingface_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-32B
+    parameter_count: "32B"
+    architecture: "Dense (Qwen2.5 backbone)"
+    status: good
+    gpu_requirements:
+      gpus: 1
+      gpu_type: H100-SXM-80GB
+      requires_infiniband: false
+      vram_gb: 65             # ~2 bytes/param at BF16
+      tensor_parallel_size: 1
+    sfcompute:
+      instance_type: h100-80gb-1x
+      nodes: 1
+      cost_per_hour_usd: ~2.00    # 1x H100 @ ~$2/GPU/hr
+    vllm_config:
+      max_model_len: 32768
+      gpu_memory_utilization: 0.90
+      dtype: bfloat16
+      served_model_name: deepseek-r1-32b
+    notes: "Good reasoning quality at half the cost. Single H100 fits comfortably."
+
+  # ─── DeepSeek R1-Distill-Qwen-14B ────────────────────────────────────────
+  - id: deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+    display_name: "DeepSeek R1 Distill Qwen 14B"
+    huggingface_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-14B
+    parameter_count: "14B"
+    architecture: "Dense (Qwen2.5 backbone)"
+    status: good_budget
+    gpu_requirements:
+      gpus: 1
+      gpu_type: H100-40GB or A100-40GB or A10G-24GB
+      requires_infiniband: false
+      vram_gb: 30
+      tensor_parallel_size: 1
+    sfcompute:
+      instance_type: a100-40gb-1x   # cheaper than H100
+      nodes: 1
+      cost_per_hour_usd: ~1.20    # 1x A100 @ ~$1.20/GPU/hr
+    vllm_config:
+      max_model_len: 16384
+      gpu_memory_utilization: 0.90
+      dtype: bfloat16
+      served_model_name: deepseek-r1-14b
+    notes: "Budget option with solid reasoning. Works on A10G for even lower cost."
+
+  # ─── DeepSeek R1-Distill-Llama-8B ────────────────────────────────────────
+  - id: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+    display_name: "DeepSeek R1 Distill Llama 8B"
+    huggingface_repo: deepseek-ai/DeepSeek-R1-Distill-Llama-8B
+    parameter_count: "8B"
+    architecture: "Dense (Llama-3 backbone)"
+    status: lightweight
+    gpu_requirements:
+      gpus: 1
+      gpu_type: A10G-24GB
+      requires_infiniband: false
+      vram_gb: 18
+      tensor_parallel_size: 1
+    sfcompute:
+      instance_type: a10g-24gb-1x
+      nodes: 1
+      cost_per_hour_usd: ~0.60    # 1x A10G @ ~$0.60/GPU/hr
+    vllm_config:
+      max_model_len: 8192
+      gpu_memory_utilization: 0.90
+      dtype: bfloat16
+      served_model_name: deepseek-r1-8b
+    notes: "Lowest cost option. Fast inference. Limited reasoning depth vs larger models."
+
+  # ─── DeepSeek R1-Distill-Qwen-7B ─────────────────────────────────────────
+  - id: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+    display_name: "DeepSeek R1 Distill Qwen 7B"
+    huggingface_repo: deepseek-ai/DeepSeek-R1-Distill-Qwen-7B
+    parameter_count: "7B"
+    architecture: "Dense (Qwen2.5 backbone)"
+    status: lightweight
+    gpu_requirements:
+      gpus: 1
+      gpu_type: A10G-24GB
+      requires_infiniband: false
+      vram_gb: 16
+      tensor_parallel_size: 1
+    sfcompute:
+      instance_type: a10g-24gb-1x
+      nodes: 1
+      cost_per_hour_usd: ~0.60    # 1x A10G @ ~$0.60/GPU/hr
+    vllm_config:
+      max_model_len: 8192
+      gpu_memory_utilization: 0.85
+      dtype: bfloat16
+      served_model_name: deepseek-r1-7b
+    notes: "Ultra-lightweight. Use for high-throughput, low-latency tasks where cost matters most."
+
+# ─── Comparison table ────────────────────────────────────────────────────────
+# Model              | Params | MATH bench | GPQA bench | $/hr | Rec?
+# ─────────────────────────────────────────────────────────────────────────────
+# R1 671B            | 671B   | 97.3%      | 71.5%      | ~$16 | ⛔ (no IB)
+# R1-Distill-Llama-70B| 70B  | 94.5%      | 65.2%      | ~$4  | ✅
+# R1-Distill-Qwen-32B| 32B   | 92.7%      | 62.1%      | ~$2  | ✅
+# R1-Distill-Qwen-14B| 14B   | 89.1%      | 59.1%      | ~$1.20 | 👍
+# R1-Distill-Llama-8B| 8B    | 86.7%      | 51.0%      | ~$0.60 | 👍
+# R1-Distill-Qwen-7B | 7B    | 83.9%      | 49.1%      | ~$0.60 | 👍
