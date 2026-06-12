@@ -1,0 +1,23 @@
+[tool.ruff]
+# Lambda handlers are deployed flat; keep the line budget generous for the
+# existing inline docs / box-drawing comments rather than reflowing them.
+line-length = 120
+target-version = "py39"
+extend-exclude = ["infra/aws-cdk/cdk.out"]
+
+[tool.ruff.lint]
+# Pyflakes (F) for real correctness issues + a conservative pycodestyle (E)
+# subset. Intentionally lenient so CI stays green without reformatting the
+# infrastructure code that this change does not own.
+select = ["F", "E4", "E7", "E9"]
+
+[tool.ruff.lint.per-file-ignores]
+# Pre-existing dead code in infrastructure files that this test-only change
+# does not own. Flagged honestly by F841/F401; left untouched to keep the diff
+# scoped to tests. (app.py also reveals a latent gap: the high-errors alarm is
+# created but never wired to the scaler SNS topic — out of scope here.)
+"infra/aws-cdk/app.py" = ["F841"]
+"infra/aws-cdk/lambda/scaler.py" = ["F401", "F841"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -28,6 +28,11 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
+try:
+    from selection import can_scale_down, can_scale_up, pick_node_to_remove
+except ImportError:  # pragma: no cover - package-relative import fallback
+    from .selection import can_scale_down, can_scale_up, pick_node_to_remove
+
 # ─── Config ───────────────────────────────────────────────────────────────────
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 NODE_TABLE_NAME = os.environ["NODE_TABLE_NAME"]
@@ -256,7 +261,7 @@ def scale_up() -> dict:
     healthy = get_healthy_nodes()
     all_nodes = get_all_nodes()
 
-    if len(all_nodes) >= MAX_NODES:
+    if not can_scale_up(len(all_nodes), MAX_NODES):
         msg = f"Already at max nodes ({MAX_NODES}); skipping scale-up"
         logger.info(msg)
         return {"action": "scale_up", "result": "skipped", "reason": msg}
@@ -297,7 +302,7 @@ def scale_down() -> dict:
     """Remove one node (least-recently-checked) from the pool."""
     healthy = get_healthy_nodes()
 
-    if len(healthy) <= MIN_NODES:
+    if not can_scale_down(len(healthy), MIN_NODES):
         msg = f"Already at min nodes ({MIN_NODES}); skipping scale-down"
         logger.info(msg)
         return {"action": "scale_down", "result": "skipped", "reason": msg}
@@ -305,7 +310,7 @@ def scale_down() -> dict:
     logger.info("Scaling DOWN: current=%d, min=%d", len(healthy), MIN_NODES)
 
     # Pick the oldest node (by last_checked)
-    target = sorted(healthy, key=lambda n: n.get("last_checked", ""))[0]
+    target = pick_node_to_remove(healthy)
     node_id = target["node_id"]
     ip = target["ip"]
 
