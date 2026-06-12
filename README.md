@@ -1,5 +1,7 @@
 # DeepSeek R1 — Auto-Scaling Inference API (Reference Architecture)
 
+[![CI](https://github.com/SammyTourani/deepseek-r1-api/actions/workflows/ci.yml/badge.svg)](https://github.com/SammyTourani/deepseek-r1-api/actions/workflows/ci.yml)
+
 An infrastructure-as-code blueprint for serving an OpenAI-compatible DeepSeek R1
 API. It runs [vLLM](https://github.com/vllm-project/vllm) on SF Compute H100 GPU
 nodes, fronted by an AWS HTTP API Gateway (v2) + a Lambda proxy for round-robin
