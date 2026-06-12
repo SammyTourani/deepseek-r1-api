@@ -1,0 +1,23 @@
+# Environment / secrets
+.env
+
+# Runtime-generated node pool state (written by provision.sh, read by Makefile)
+config/nodes.json
+config/nodes.*.json.bak
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# AWS CDK
+infra/aws-cdk/cdk.out/
+cdk.out/
+
+# Model weights cache
+docker/models/
+models/
+
+# macOS
+.DS_Store
