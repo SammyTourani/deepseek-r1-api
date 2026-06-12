@@ -21,6 +21,11 @@ from typing import Any
 import boto3
 from botocore.exceptions import ClientError
 
+try:
+    from selection import eject_node, select_round_robin
+except ImportError:  # pragma: no cover - package-relative import fallback
+    from .selection import eject_node, select_round_robin
+
 # ─── Config ───────────────────────────────────────────────────────────────────
 LOG_LEVEL = os.environ.get("LOG_LEVEL", "INFO")
 NODE_TABLE_NAME = os.environ["NODE_TABLE_NAME"]
@@ -193,9 +198,8 @@ def handler(event: dict, context: Any) -> dict:
     last_error = None
     for attempt in range(MAX_RETRIES + 1):
         # Round-robin selection
-        idx = _round_robin_counter % len(nodes)
+        node = select_round_robin(nodes, _round_robin_counter)
         _round_robin_counter += 1
-        node = nodes[idx % len(nodes)]
 
         node_ip = node["ip"]
         node_id = node["node_id"]
@@ -252,7 +256,7 @@ def handler(event: dict, context: Any) -> dict:
             emit_latency_metric(latency_ms, success=False)
             last_error = str(e)
             # Remove from local list for this invocation
-            nodes = [n for n in nodes if n["node_id"] != node_id]
+            nodes = eject_node(nodes, node_id)
             if not nodes:
                 break
 
